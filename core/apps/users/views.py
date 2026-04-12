@@ -23,7 +23,10 @@ def get_tokens(user):
 class RegisterView(APIView):
    
     permission_classes = [AllowAny]
-
+    
+    def get(self, request):
+        return Response({"message": "Use POST to register"})
+    
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
