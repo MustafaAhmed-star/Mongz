@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.pagination import PageNumberPagination
 
 from apps.users.models import User
 from .models import ServiceCategory, WorkerProfile
@@ -12,7 +13,19 @@ from .serializers import (
 )
 
 
-# Service Categoies
+#  Pagination
+
+class WorkerPagination(PageNumberPagination):
+    """
+    Pagination for the workers list.
+    Default: 10 per page. Client can request up to 50 with ?page_size=N.
+    """
+    page_size = 10
+    page_size_query_param = "page_size"   # ?page_size=20
+    max_page_size = 50
+
+
+#  Service Categories
 
 class CategoryListView(APIView):
     permission_classes = [AllowAny]
@@ -23,7 +36,7 @@ class CategoryListView(APIView):
 
 
 class CategoryCreateView(APIView):
-    #for admin only
+    """POST /api/categories/create/ — admin only"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -39,15 +52,63 @@ class CategoryCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Worker Profiles
+# ── Worker Profiles ───────────────────────────────────────────────────
+
 class WorkerListView(APIView):
+    """
+    GET /api/workers/
+
+    Returns available workers, sorted by score descending.
+
+    Optional query params:
+        ?category=<id>      filter by service category ID
+        ?search=<text>      filter by profession keyword (case-insensitive)
+        ?page=<n>           page number (default 1)
+        ?page_size=<n>      results per page (default 10, max 50)
+
+    Score formula: (average_rating × 0.6) + (completed_jobs × 0.4)
+    """
+    
     permission_classes = [AllowAny]
 
     def get(self, request):
-        workers = WorkerProfile.objects.select_related("user").filter(
-            user__is_active=True
+        queryset = WorkerProfile.objects.select_related("user").filter(
+            user__is_active = True,
+            user__role  = User.Role.WORKER,
+            is_available  = True,
         )
-        return Response(WorkerProfileSerializer(workers, many=True).data)
+
+        # ── Filter by category (optional) ────────────────────────────
+        category_id = request.query_params.get("category")
+        if category_id:
+            try:
+                category = ServiceCategory.objects.get(pk=category_id)
+            except ServiceCategory.DoesNotExist:
+                return Response(
+                    {"error": f"Category with id={category_id} does not exist."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            # Match workers whose profession matches the category name
+            queryset = queryset.filter(profession__iexact=category.name)
+
+        # ── Filter by search keyword (optional) ──────────────────────
+        search = request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(profession__icontains=search)
+
+        
+        sorted_workers = sorted(
+            queryset,
+            key=lambda p: p.calculate_score(),
+            reverse=True,   # highest score first
+        )
+
+        # ── Paginate ──────────────────────────────────────────────────
+        paginator = WorkerPagination()
+        page  = paginator.paginate_queryset(sorted_workers, request)
+
+        serializer = WorkerProfileSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class WorkerCreateView(APIView):
@@ -87,7 +148,10 @@ class WorkerDetailView(APIView):
 
 
 class MyWorkerProfileView(APIView):
-    
+    """
+    GET   /api/workers/me/ — see my own worker profile
+    PATCH /api/workers/me/ — update my own worker profile
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
