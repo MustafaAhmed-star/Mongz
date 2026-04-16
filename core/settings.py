@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.workers',
     'apps.notifications',
+    
     'apps.orders',
 ]
 
