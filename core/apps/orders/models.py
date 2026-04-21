@@ -4,17 +4,16 @@ from apps.workers.models import ServiceCategory
 
 
 class Order(models.Model):
-
-    PENDING  = "PENDING"
-    ACCEPTED  = "ACCEPTED"
-    REJECTED  = "REJECTED"
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
     COMPLETED = "COMPLETED"
 
     STATUS_CHOICES = [
-        (PENDING,   "Pending"),
-        (ACCEPTED,  "Accepted"),
-        (REJECTED,  "Rejected"),
+        (PENDING, "Pending"),
+        (ACCEPTED, "Accepted"),
+        (REJECTED, "Rejected"),
         (CANCELLED, "Cancelled"),
         (COMPLETED, "Completed"),
     ]
@@ -31,20 +30,20 @@ class Order(models.Model):
         blank = True,
         related_name = "assigned_orders",
     )
+        
     service_category = models.ForeignKey(
         ServiceCategory,
         on_delete = models.PROTECT,
     )
-    price = models.DecimalField(max_digits=10, decimal_places=2)
     commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default=PENDING,
+        max_length = 10,
+        choices = STATUS_CHOICES,
+        default = PENDING,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_at  = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
 

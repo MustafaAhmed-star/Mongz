@@ -1,7 +1,8 @@
 from rest_framework import serializers
+from apps.users.models import User
 from apps.users.serializers import UserSerializer
+from apps.workers.models import ServiceCategory, WorkerProfile
 from apps.workers.serializers import ServiceCategorySerializer
-from apps.workers.models import ServiceCategory
 from .models import Order
 
 
@@ -10,18 +11,15 @@ class OrderSerializer(serializers.ModelSerializer):
     client = UserSerializer(read_only=True)
     worker = UserSerializer(read_only=True)
     service_category = ServiceCategorySerializer(read_only=True)
-
-    # Show payment info nested inside the order response
     commission_payment = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Order
+        model = Order
         fields = [
             "id",
             "client",
             "worker",
             "service_category",
-            "price",
             "commission",
             "status",
             "created_at",
@@ -32,10 +30,6 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_commission_payment(self, order):
-        """
-        Return payment info if it exists, None if it doesn't.
-        We never expose payment_key — it's sensitive.
-        """
         try:
             p = order.commission_payment
             return {
@@ -51,9 +45,47 @@ class OrderSerializer(serializers.ModelSerializer):
 class OrderCreateSerializer(serializers.ModelSerializer):
     
     service_category = serializers.PrimaryKeyRelatedField(
-        queryset=ServiceCategory.objects.all()
+        queryset=ServiceCategory.objects.all(),
+    )
+    worker_id = serializers.PrimaryKeyRelatedField(
+        queryset   = User.objects.filter(role=User.Role.WORKER),
+        source = "worker",
+        required = False,
+        allow_null = True,
     )
 
     class Meta:
         model  = Order
-        fields = ["service_category", "price"]
+        fields = ["service_category", "worker_id"]
+
+    def validate(self, attrs):
+        """Validate worker against category when worker_id is provided."""
+        worker = attrs.get("worker")
+        service_category = attrs.get("service_category")
+
+        if worker is None:
+            return attrs
+
+        if not hasattr(worker, "worker_profile"):
+            raise serializers.ValidationError(
+                {"worker_id": "This worker does not have a profile yet."}
+            )
+
+        profile = worker.worker_profile
+
+        if not profile.is_available:
+            raise serializers.ValidationError(
+                {"worker_id": "This worker is not currently available."}
+            )
+
+        if profile.profession.lower() != service_category.name.lower():
+            raise serializers.ValidationError(
+                {
+                    "worker_id": (
+                        f"Worker's profession '{profile.profession}' does not match "
+                        f"the selected category '{service_category.name}'."
+                    )
+                }
+            )
+
+        return attrs

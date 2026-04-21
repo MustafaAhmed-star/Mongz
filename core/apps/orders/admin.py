@@ -6,7 +6,7 @@ from .models import Order
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         "id", "client", "worker", "service_category",
-        "price", "commission", "status", "created_at",
+        "commission", "status", "created_at",
     ]
     list_filter = ["status", "service_category"]
     search_fields = ["client__username", "worker__username"]
