@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-gxr55=-+x#dxzje^6k37&*cev8*$kdpv6$+((qr^hra&twfzxk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -163,3 +163,13 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+#  Paymob Settings
+# Get these 3 values from your Paymob dashboard
+PAYMOB_API_KEY = ""
+PAYMOB_INTEGRATION_ID = 0
+PAYMOB_HMAC_SECRET = ""
+
+# Commission amount for each order
+COMMISSION_AMOUNT = 20
