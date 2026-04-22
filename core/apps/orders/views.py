@@ -110,3 +110,209 @@ class OrderListCreateView(APIView):
         response_data = OrderSerializer(order).data
         response_data["payment_key"] = payment_key
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+class OrderAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        if request.user.role != User.Role.WORKER:
+            return Response(
+                {"error": "Only workers can accept orders."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.status != Order.PENDING:
+            return Response(
+                {"error": f"Cannot accept an order with status '{order.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update order
+        order.status = Order.ACCEPTED
+        order.worker = request.user
+        order.accepted_at = now()
+        order.commission  = settings.COMMISSION_AMOUNT
+        order.save()
+        try:
+            payment = order.commission_payment
+            if (
+                payment.payment_status == CommissionPayment.AUTHORIZED
+                and payment.paymob_transaction_id
+            ):
+                paymob.capture_commission(payment.paymob_transaction_id, payment.amount)
+                payment.payment_status = CommissionPayment.CAPTURED
+                payment.save()
+                logger.info(f"Commission CAPTURED — Order #{order.id}")
+            else:
+                logger.warning(
+                    f"Order #{order.id} accepted but paymob_transaction_id is empty. "
+                    "Capture skipped — handle manually."
+                )
+        except CommissionPayment.DoesNotExist:
+            logger.warning(f"Order #{order.id} accepted but no CommissionPayment record found.")
+        except Exception as e:
+            # Never block order acceptance because of a Paymob failure
+            logger.error(f"Paymob CAPTURE failed for Order #{order.id}: {e}")
+
+        # Notify client
+        send_notification(
+            order.client,
+            title = "Order Accepted ✅",
+            message  = f"{request.user.username} accepted your order #{order.id}.",
+            notif_type = Notification.PUSH,
+        )
+        return Response(OrderSerializer(order).data)
+
+
+class OrderRejectView(APIView):
+    """POST /api/orders/{id}/reject/ — worker rejects the order"""
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        if request.user.role != User.Role.WORKER:
+            return Response(
+                {"error": "Only workers can reject orders."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.status != Order.PENDING:
+            return Response(
+                {"error": f"Cannot reject an order with status '{order.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update order
+        order.status       = Order.REJECTED
+        order.cancelled_at = now()
+        order.save()
+
+        # Void commission via Paymob — release the card hold
+        try:
+            payment = order.commission_payment
+            if (
+                payment.payment_status == CommissionPayment.AUTHORIZED
+                and payment.paymob_transaction_id
+            ):
+                paymob.void_commission(payment.paymob_transaction_id)
+                payment.payment_status = CommissionPayment.VOIDED
+                payment.save()
+                logger.info(f"Commission VOIDED (rejected) — Order #{order.id}")
+        except CommissionPayment.DoesNotExist:
+            logger.warning(f"Order #{order.id} rejected but no CommissionPayment record found.")
+        except Exception as e:
+            logger.error(f"Paymob VOID failed for Order #{order.id}: {e}")
+
+        # Notify client
+        send_notification(
+            order.client,
+            title   = "Order Rejected ❌",
+            message = f"Your order #{order.id} was rejected. We will try to find another worker.",
+        )
+        return Response(OrderSerializer(order).data)
+
+
+class OrderCancelView(APIView):
+    """POST /api/orders/{id}/cancel/ — client cancels the order"""
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        if request.user.role != User.Role.CLIENT:
+            return Response(
+                {"error": "Only clients can cancel orders."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            # Filter by client so a client can never cancel someone else's order
+            order = Order.objects.get(pk=pk, client=request.user)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.status != Order.PENDING:
+            return Response(
+                {"error": f"Cannot cancel an order with status '{order.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update order
+        order.status = Order.CANCELLED
+        order.cancelled_at = now()
+        order.save()
+
+        # Void commission via Paymob — only if it was AUTHORIZED
+        try:
+            payment = order.commission_payment
+            if (
+                payment.payment_status == CommissionPayment.AUTHORIZED
+                and payment.paymob_transaction_id
+            ):
+                paymob.void_commission(payment.paymob_transaction_id)
+                payment.payment_status = CommissionPayment.VOIDED
+                payment.save()
+                logger.info(f"Commission VOIDED (cancelled) — Order #{order.id}")
+        except CommissionPayment.DoesNotExist:
+            logger.warning(f"Order #{order.id} cancelled but no CommissionPayment record found.")
+        except Exception as e:
+            logger.error(f"Paymob VOID failed for Order #{order.id}: {e}")
+
+        # Notify worker if one was assigned
+        if order.worker:
+            send_notification(
+                order.worker,
+                title   = "Order Cancelled",
+                message = f"Order #{order.id} was cancelled by the client.",
+            )
+        return Response(OrderSerializer(order).data)
+
+
+class OrderCompleteView(APIView):
+    """POST /api/orders/{id}/complete/ — worker marks the order as done"""
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        if request.user.role != User.Role.WORKER:
+            return Response(
+                {"error": "Only workers can complete orders."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            # Filter by worker so a worker can only complete their own assigned orders
+            order = Order.objects.get(pk=pk, worker=request.user)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.status != Order.ACCEPTED:
+            return Response(
+                {"error": f"Cannot complete an order with status '{order.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update order
+        order.status   = Order.COMPLETED
+        order.completed_at = now()
+        order.save()
+
+        # Update worker's completed jobs count
+        profile = request.user.worker_profile
+        profile.completed_jobs += 1
+        profile.save()
+
+        # Notify client to leave a rating
+        send_notification(
+            order.client,
+            title      = "Job Completed ⭐",
+            message    = f"Order #{order.id} is done! Please leave a rating for the worker.",
+            notif_type = Notification.PUSH,
+        )
+        return Response(OrderSerializer(order).data)
