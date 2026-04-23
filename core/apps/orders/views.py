@@ -110,6 +110,24 @@ class OrderListCreateView(APIView):
         response_data = OrderSerializer(order).data
         response_data["payment_key"] = payment_key
         return Response(response_data, status=status.HTTP_201_CREATED)
+class OrderDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only the client, the worker, or an admin can see the order
+        if request.user.role != User.Role.ADMIN:
+            if order.client != request.user and order.worker != request.user:
+                return Response(
+                    {"error": "You do not have access to this order."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        return Response(OrderSerializer(order).data)
 
 class OrderAcceptView(APIView):
     permission_classes = [IsAuthenticated]
