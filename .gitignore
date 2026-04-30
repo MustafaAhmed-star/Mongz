@@ -1,1 +1,37 @@
-Nothing should be ignored since the changes only include test files (.py files) which are source code and not build artifacts, dependencies, or temporary files.
+```
+# Flutter/Dart specific
+.dart_tool/
+.build/
+.packages
+*.g.dart
+*.freezed.dart
+
+# Dependencies
+.pub/
+pubspec.lock
+
+# Build outputs
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+```
