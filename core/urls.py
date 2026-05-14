@@ -6,6 +6,7 @@ from django.urls import include, path
 api_patterns = [
     path("", include("apps.users.urls")),
     path("", include("apps.workers.urls")),
+    path("", include("apps.orders.urls")), 
     path("", include("apps.notifications.urls")),
     path("", include("apps.payments.urls")),
     path("", include("apps.ratings.urls")),
