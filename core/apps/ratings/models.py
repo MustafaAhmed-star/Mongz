@@ -1,6 +1,7 @@
 from django.db import models
-from apps.users.models import User
-from apps.orders.models import Order
+from django.core.validators import MaxValueValidator, MinValueValidator
+from core.apps.users.models import User
+from core.apps.orders.models import Order
 
 
 class Rating(models.Model):
@@ -20,7 +21,9 @@ class Rating(models.Model):
         on_delete=models.CASCADE,
         related_name="received_ratings",
     )
-    stars = models.PositiveSmallIntegerField()  # 1 to 5
+    stars = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
     review = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

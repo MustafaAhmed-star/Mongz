@@ -4,13 +4,13 @@ from django.urls import include, path
 
 
 api_patterns = [
-    path("", include("apps.users.urls")),
-    path("", include("apps.workers.urls")),
-    path("", include("apps.notifications.urls")),
-    path("", include("apps.payments.urls")),
-    path("", include("apps.ratings.urls")),
-    path("", include("apps.favorites.urls")),
-
+    path("", include("core.apps.users.urls")),
+    path("", include("core.apps.workers.urls")),
+    path("", include("core.apps.orders.urls")),
+    path("", include("core.apps.notifications.urls")),
+    path("", include("core.apps.payments.urls")),
+    path("", include("core.apps.ratings.urls")),
+    path("", include("core.apps.favorites.urls")),
 ]
 urlpatterns = [
     path('admin/', admin.site.urls),

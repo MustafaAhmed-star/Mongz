@@ -8,11 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.notifications.models import Notification
-from apps.payments.models import CommissionPayment
-from apps.payments import paymob
-from apps.users.models import User
-from apps.workers.models import WorkerProfile
+from core.apps.notifications.models import Notification
+from core.apps.payments.models import CommissionPayment
+from core.apps.payments import paymob
+from core.apps.users.models import User
+from core.apps.workers.models import WorkerProfile
 from .models import Order
 from .serializers import OrderCreateSerializer, OrderSerializer
 
@@ -26,7 +26,7 @@ def now():
 
 def send_notification(user, title, message, notif_type=Notification.IN_APP):
     Notification.objects.create(
-        user=user, title=title, message=message, type=notif_type,
+        user=user, title=title, message=message, notification_type=notif_type,
     )
 
 
@@ -84,11 +84,18 @@ class OrderListCreateView(APIView):
             client=request.user,
             service_category=serializer.validated_data["service_category"],
             worker=serializer.validated_data.get("worker"),
+            description=serializer.validated_data.get("description", ""),
+            scheduled_at=serializer.validated_data.get("scheduled_at"),
         )
 
         payment_key = authorize_commission(order)
 
         available_workers = WorkerProfile.objects.select_related("user").filter(
+            user__role=User.Role.WORKER,
+            is_available=True,
+        ).filter(
+            service_category=order.service_category,
+        ) | WorkerProfile.objects.select_related("user").filter(
             user__role=User.Role.WORKER,
             is_available=True,
             profession__iexact=order.service_category.name,
@@ -322,9 +329,16 @@ class OrderCompleteView(APIView):
         order.save()
 
         # Update worker's completed jobs count
-        profile = request.user.worker_profile
-        profile.completed_jobs += 1
-        profile.save()
+        if hasattr(request.user, "worker_profile"):
+            profile = request.user.worker_profile
+            profile.completed_jobs += 1
+            profile.save()
+        else:
+            logger.warning(
+                "Order #%s was completed by worker user %s without a WorkerProfile.",
+                order.id,
+                request.user.id,
+            )
 
         # Notify client to leave a rating
         send_notification(

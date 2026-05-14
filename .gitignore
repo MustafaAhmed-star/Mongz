@@ -1,4 +1,3 @@
-```
 # Flutter/Dart specific
 .dart_tool/
 .build/
@@ -24,6 +23,7 @@ dist/
 .env
 .env.local
 *.env.*
+!.env.example
 
 # Logs
 *.log
@@ -32,6 +32,13 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Python/Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+db.sqlite3
+.venv/
+
 # Temporary files
 *.tmp
-```

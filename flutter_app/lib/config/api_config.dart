@@ -4,9 +4,9 @@ class ApiConfig {
   static const String baseUrl = 'http://localhost:8000/api';
   
   // Endpoints
-  static const String register = '/register/';
-  static const String login = '/login/';
-  static const String me = '/me/';
+  static const String register = '/auth/register/';
+  static const String login = '/auth/login/';
+  static const String me = '/users/me/';
   
   // Workers endpoints
   static const String workers = '/workers/';

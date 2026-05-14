@@ -18,9 +18,38 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 
+from core.apps.orders.models import Order
+from . import paymob
 from .models import CommissionPayment
 
 logger = logging.getLogger(__name__)
+
+
+def capture_if_order_is_accepted(payment):
+    """
+    If the worker accepted before Paymob sent the transaction id, capture now.
+    This closes the timing gap between order acceptance and webhook delivery.
+    """
+    if payment.order.status != Order.ACCEPTED:
+        return
+    if payment.payment_status != CommissionPayment.AUTHORIZED:
+        return
+    if not payment.paymob_transaction_id:
+        return
+
+    try:
+        paymob.capture_commission(payment.paymob_transaction_id, payment.amount)
+    except Exception as exc:
+        logger.error(
+            "Webhook capture failed for Order #%s: %s",
+            payment.order_id,
+            exc,
+        )
+        return
+
+    payment.payment_status = CommissionPayment.CAPTURED
+    payment.save(update_fields=["payment_status", "updated_at"])
+    logger.info("Commission CAPTURED by webhook — Order #%s", payment.order_id)
 
 
 def verify_hmac(data: dict, received_hmac: str) -> bool:
@@ -115,6 +144,7 @@ class PaymobWebhookView(APIView):
             payment.payment_status = CommissionPayment.FAILED
 
         payment.save()
+        capture_if_order_is_accepted(payment)
         logger.info(
             f"Webhook processed: Order #{payment.order_id} "
             f"→ transaction={paymob_transaction_id} status={payment.payment_status}"

@@ -7,17 +7,18 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model  = User
-        fields = ["id", "username", "phone", "address", "role", "date_joined"]
+        fields = ["id", "username", "email", "phone", "address", "role", "date_joined"]
         read_only_fields = fields
 
 #for creating a new account
 class RegisterSerializer(serializers.ModelSerializer):
     
     password = serializers.CharField(write_only=True, min_length=6)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["username", "phone", "address", "password", "role"]
+        fields = ["username", "email", "phone", "address", "password", "role"]
 
     def validate_role(self, value):
         
@@ -29,6 +30,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         #usinge create_user to hash the password 
         return User.objects.create_user(
             username = validated_data["username"],
+            email    = validated_data.get("email") or None,
             phone    = validated_data["phone"],
             address  = validated_data.get("address", ""),
             password = validated_data["password"],
@@ -54,4 +56,4 @@ class LoginSerializer(serializers.Serializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
-        fields = ["username", "phone", "address"]
+        fields = ["username", "email", "phone", "address"]

@@ -1,27 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../config/app_theme.dart';
-import '../providers/auth_provider.dart';
-import '../providers/worker_provider.dart';
-import '../providers/order_provider.dart';
-import '../providers/notification_provider.dart';
-import '../screens/onboarding/splash_screen.dart';
-import '../screens/onboarding/onboarding_screen.dart';
-import '../screens/auth/login_screen.dart';
-import '../screens/auth/register_screen.dart';
-import '../screens/client/client_home_screen.dart';
-import '../screens/client/order_detail_screen.dart';
-import '../screens/client/create_order_screen.dart';
-import '../screens/client/workers_list_screen.dart';
-import '../screens/client/favorites_screen.dart';
-import '../screens/client/profile_screen.dart';
-import '../screens/worker/worker_home_screen.dart';
-import '../screens/worker/worker_profile_screen.dart';
-import '../screens/worker/worker_orders_screen.dart';
-import '../screens/worker/availability_toggle_screen.dart';
-import '../screens/common/notifications_screen.dart';
-import '../screens/common/settings_screen.dart';
+import 'config/app_theme.dart';
+import 'providers/auth_provider.dart';
+import 'providers/worker_provider.dart';
+import 'providers/order_provider.dart';
+import 'providers/notification_provider.dart';
+import 'screens/app_screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

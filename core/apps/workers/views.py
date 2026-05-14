@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import ExpressionWrapper, F, FloatField, Q
 
-from apps.users.models import User
+from core.apps.users.models import User
 from .models import ServiceCategory, WorkerProfile
 from .serializers import (
     ServiceCategorySerializer,
@@ -88,24 +89,25 @@ class WorkerListView(APIView):
                     {"error": f"Category with id={category_id} does not exist."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-            # Match workers whose profession matches the category name
-            queryset = queryset.filter(profession__iexact=category.name)
+            queryset = queryset.filter(
+                Q(service_category=category) | Q(profession__iexact=category.name)
+            )
 
         # ── Filter by search keyword (optional) ──────────────────────
         search = request.query_params.get("search")
         if search:
             queryset = queryset.filter(profession__icontains=search)
 
-        
-        sorted_workers = sorted(
-            queryset,
-            key=lambda p: p.calculate_score(),
-            reverse=True,   # highest score first
-        )
+        queryset = queryset.annotate(
+            score=ExpressionWrapper(
+                F("average_rating") * 0.6 + F("completed_jobs") * 0.4,
+                output_field=FloatField(),
+            )
+        ).order_by("-score")
 
         # ── Paginate ──────────────────────────────────────────────────
         paginator = WorkerPagination()
-        page  = paginator.paginate_queryset(sorted_workers, request)
+        page  = paginator.paginate_queryset(queryset, request)
 
         serializer = WorkerProfileSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)

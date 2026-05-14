@@ -5,9 +5,9 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from decimal import Decimal
 
-from apps.users.models import User
-from apps.workers.models import ServiceCategory, WorkerProfile
-from apps.orders.models import Order
+from core.apps.users.models import User
+from core.apps.workers.models import ServiceCategory, WorkerProfile
+from core.apps.orders.models import Order
 from .models import CommissionPayment
 from . import paymob
 

@@ -1,6 +1,6 @@
 from django.db import models
-from apps.users.models import User
-from apps.workers.models import ServiceCategory
+from core.apps.users.models import User
+from core.apps.workers.models import ServiceCategory
 
 
 class Order(models.Model):
@@ -35,6 +35,8 @@ class Order(models.Model):
         ServiceCategory,
         on_delete = models.PROTECT,
     )
+    description = models.TextField(blank=True, default="")
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(
         max_length = 10,

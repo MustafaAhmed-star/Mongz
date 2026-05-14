@@ -1,5 +1,5 @@
 from django.db import models
-from apps.users.models import User
+from core.apps.users.models import User
 
 
 class Notification(models.Model):
@@ -21,7 +21,7 @@ class Notification(models.Model):
     )
     title  = models.CharField(max_length=255)
     message = models.TextField()
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=IN_APP)
+    notification_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=IN_APP)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -29,4 +29,4 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"[{self.type}] {self.title} → {self.user.username}"
+        return f"[{self.notification_type}] {self.title} → {self.user.username}"

@@ -5,6 +5,7 @@ class Order {
   final int? workerId;
   final int serviceCategoryId;
   final String serviceCategoryName;
+  final String description;
   final double commission;
   final String status; // PENDING, ACCEPTED, REJECTED, CANCELLED, COMPLETED
   final DateTime? createdAt;
@@ -19,6 +20,7 @@ class Order {
     this.workerId,
     required this.serviceCategoryId,
     this.serviceCategoryName = '',
+    this.description = '',
     this.commission = 0.0,
     this.status = 'PENDING',
     this.createdAt,
@@ -29,13 +31,20 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+    final client = json['client'];
+    final worker = json['worker'];
+    final serviceCategory = json['service_category'];
+
     return Order(
       id: json['id'],
-      clientId: json['client'] ?? json['client_id'] ?? 0,
-      workerId: json['worker'] ?? json['worker_id'],
-      serviceCategoryId: json['service_category'] ?? json['service_category_id'] ?? 0,
+      clientId: client is Map ? client['id'] ?? 0 : json['client_id'] ?? client ?? 0,
+      workerId: worker is Map ? worker['id'] : json['worker_id'] ?? worker,
+      serviceCategoryId: serviceCategory is Map
+          ? serviceCategory['id'] ?? 0
+          : json['service_category_id'] ?? serviceCategory ?? 0,
       serviceCategoryName: json['service_category_name'] ?? 
           (json['service_category'] is Map ? json['service_category']['name'] ?? '' : ''),
+      description: json['description'] ?? '',
       commission: double.tryParse(json['commission']?.toString() ?? '0') ?? 0.0,
       status: json['status'] ?? 'PENDING',
       createdAt: json['created_at'] != null 
@@ -61,6 +70,7 @@ class Order {
       'worker': workerId,
       'service_category': serviceCategoryId,
       'service_category_name': serviceCategoryName,
+      'description': description,
       'commission': commission.toString(),
       'status': status,
       'created_at': createdAt?.toIso8601String(),
@@ -83,6 +93,7 @@ class Order {
     int? workerId,
     int? serviceCategoryId,
     String? serviceCategoryName,
+    String? description,
     double? commission,
     String? status,
     DateTime? createdAt,
@@ -97,6 +108,7 @@ class Order {
       workerId: workerId ?? this.workerId,
       serviceCategoryId: serviceCategoryId ?? this.serviceCategoryId,
       serviceCategoryName: serviceCategoryName ?? this.serviceCategoryName,
+      description: description ?? this.description,
       commission: commission ?? this.commission,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,

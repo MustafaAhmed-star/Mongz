@@ -1,5 +1,5 @@
 from django.db import models
-from apps.users.models import User
+from core.apps.users.models import User
 
 
 class ServiceCategory(models.Model):
@@ -15,6 +15,13 @@ class WorkerProfile(models.Model):
         User,
         on_delete = models.CASCADE,
         related_name = "worker_profile" 
+    )
+    service_category = models.ForeignKey(
+        ServiceCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="workers",
     )
     profession = models.CharField(max_length=200)
     experience_years = models.PositiveIntegerField(default=0)

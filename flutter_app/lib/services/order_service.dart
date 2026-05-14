@@ -15,17 +15,11 @@ class OrderService {
   })  : _client = client ?? http.Client(),
         _authService = authService ?? ApiService();
 
-  Map<String, String> get _headers {
-    final headers = {'Content-Type': 'application/json'};
-    // In a real app, you'd add auth token from ApiService
-    return headers;
-  }
-
   // Get user's orders
   Future<List<Order>> getOrders() async {
     final response = await _client.get(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orders}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -40,7 +34,7 @@ class OrderService {
   Future<Order> getOrderById(int id) async {
     final response = await _client.get(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orderDetail}$id/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -57,10 +51,10 @@ class OrderService {
   }) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orders}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
       body: jsonEncode({
         'service_category': serviceCategoryId,
-        if (workerId != null) 'worker': workerId,
+        if (workerId != null) 'worker_id': workerId,
       }),
     );
 
@@ -75,7 +69,7 @@ class OrderService {
   Future<Order> acceptOrder(int orderId) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orderAccept}$orderId/accept/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -89,7 +83,7 @@ class OrderService {
   Future<Order> rejectOrder(int orderId) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orderReject}$orderId/reject/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -103,7 +97,7 @@ class OrderService {
   Future<Order> cancelOrder(int orderId) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orderCancel}$orderId/cancel/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -117,7 +111,7 @@ class OrderService {
   Future<Order> completeOrder(int orderId) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.orderComplete}$orderId/complete/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -136,7 +130,7 @@ class OrderService {
   }) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.ratings}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
       body: jsonEncode({
         'order': orderId,
         'worker': workerId,

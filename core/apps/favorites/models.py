@@ -1,5 +1,5 @@
 from django.db import models
-from apps.users.models import User
+from core.apps.users.models import User
 
 
 class Favorite(models.Model):

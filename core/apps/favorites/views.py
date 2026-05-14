@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.models import User
+from core.apps.users.models import User
 from .models import Favorite
 from .serializers import FavoriteSerializer
 
@@ -28,7 +28,7 @@ class FavoriteListCreateView(APIView):
                 {"error": "Only clients can add favorites."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serializer = FavoriteSerializer(data=request.data)
+        serializer = FavoriteSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

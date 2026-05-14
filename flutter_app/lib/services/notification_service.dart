@@ -15,17 +15,11 @@ class NotificationService {
   })  : _client = client ?? http.Client(),
         _authService = authService ?? ApiService();
 
-  Map<String, String> get _headers {
-    final headers = {'Content-Type': 'application/json'};
-    // In a real app, you'd add auth token from ApiService
-    return headers;
-  }
-
   // Get all notifications for current user
   Future<List<Notification>> getNotifications() async {
     final response = await _client.get(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.notifications}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode == 200) {
@@ -40,7 +34,7 @@ class NotificationService {
   Future<void> markAsRead(int notificationId) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.notifications}$notificationId/read/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode != 200) {
@@ -52,7 +46,7 @@ class NotificationService {
   Future<void> markAllAsRead() async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.notifications}read-all/'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
     );
 
     if (response.statusCode != 200) {

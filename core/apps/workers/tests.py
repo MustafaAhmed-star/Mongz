@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from decimal import Decimal
 
-from apps.users.models import User
+from core.apps.users.models import User
 from .models import ServiceCategory, WorkerProfile
 from .serializers import ServiceCategorySerializer, WorkerProfileSerializer, WorkerProfileWriteSerializer
 

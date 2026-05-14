@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from apps.users.models import User
-from apps.users.serializers import UserSerializer
+from core.apps.users.models import User
+from core.apps.users.serializers import UserSerializer
 from .models import Favorite
 
 

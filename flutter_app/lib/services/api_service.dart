@@ -27,6 +27,11 @@ class ApiService {
     return headers;
   }
 
+  Future<Map<String, String>> getAuthHeaders() async {
+    await loadTokens();
+    return _headers;
+  }
+
   // Save tokens to secure storage
   Future<void> _saveTokens(AuthTokens tokens) async {
     _accessToken = tokens.accessToken;
@@ -61,7 +66,7 @@ class ApiService {
     String role = 'client',
   }) async {
     final response = await _client.post(
-      Uri.parse('${ApiConfig.baseUrl}/register/'),
+      Uri.parse('${ApiConfig.baseUrl}${ApiConfig.register}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
@@ -91,7 +96,7 @@ class ApiService {
     required String password,
   }) async {
     final response = await _client.post(
-      Uri.parse('${ApiConfig.baseUrl}/login/'),
+      Uri.parse('${ApiConfig.baseUrl}${ApiConfig.login}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
@@ -115,7 +120,7 @@ class ApiService {
   // Get current user profile
   Future<User> getMyProfile() async {
     final response = await _client.get(
-      Uri.parse('${ApiConfig.baseUrl}/me/'),
+      Uri.parse('${ApiConfig.baseUrl}${ApiConfig.me}'),
       headers: _headers,
     );
 
@@ -141,7 +146,7 @@ class ApiService {
     if (address != null) body['address'] = address;
 
     final response = await _client.patch(
-      Uri.parse('${ApiConfig.baseUrl}/me/'),
+      Uri.parse('${ApiConfig.baseUrl}${ApiConfig.me}'),
       headers: _headers,
       body: jsonEncode(body),
     );

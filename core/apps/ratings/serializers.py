@@ -1,6 +1,6 @@
 from django.db.models import Avg
 from rest_framework import serializers
-from apps.orders.models import Order
+from core.apps.orders.models import Order
 from .models import Rating
 
 

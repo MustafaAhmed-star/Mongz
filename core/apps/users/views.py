@@ -1,3 +1,5 @@
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,6 +22,7 @@ def get_tokens(user):
     }
 
 
+@method_decorator(ratelimit(key="ip", rate="10/m", block=True), name="post")
 class RegisterView(APIView):
    
     permission_classes = [AllowAny]
@@ -42,6 +45,7 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key="ip", rate="5/m", block=True), name="post")
 class LoginView(APIView):
    
     permission_classes = [AllowAny]

@@ -10,8 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
+
+from decouple import Csv, config
 
 AUTH_USER_MODEL = "users.User"
 
@@ -23,12 +25,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-gxr55=-+x#dxzje^6k37&*cev8*$kdpv6$+((qr^hra&twfzxk'
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-local-dev-only-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,testserver",
+    cast=Csv(),
+)
 
 
 # Application definition
@@ -45,13 +51,13 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     # Our apps
-    'apps.users',
-    'apps.workers',
-    'apps.notifications',
-    'apps.payments',
-    'apps.orders',
-    'apps.ratings',
-    'apps.favorites',
+    'core.apps.users',
+    'core.apps.workers',
+    'core.apps.notifications',
+    'core.apps.payments',
+    'core.apps.orders',
+    'core.apps.ratings',
+    'core.apps.favorites',
 ]
 
 MIDDLEWARE = [
@@ -162,14 +168,14 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS":  True,
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", default=True, cast=bool)
 
 
 #  Paymob Settings
 # Get these 3 values from your Paymob dashboard
-PAYMOB_API_KEY = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRFMU5UVTNOQ3dpYm1GdFpTSTZJbWx1YVhScFlXd2lmUS5DMkc1V2hEaGJ5OGtNYjNyUm1Oc1ZwM3BSLWs3Ty1DZkVZYTM3OFlZOXpldkE4SjRka3dyRmZwZGo5eFZYRVp1aGlwVGQ5NDZlbmw1TFB4Mjd4UmkwQQ=="
-PAYMOB_INTEGRATION_ID = 5628926 #wallet
-PAYMOB_HMAC_SECRET = "0043FCBD61C9F826CFD1E57710CD8276"
+PAYMOB_API_KEY = config("PAYMOB_API_KEY", default="")
+PAYMOB_INTEGRATION_ID = config("PAYMOB_INTEGRATION_ID", default=5628926, cast=int)  # wallet
+PAYMOB_HMAC_SECRET = config("PAYMOB_HMAC_SECRET", default="")
 
 # Commission amount for each order
-COMMISSION_AMOUNT = 20
+COMMISSION_AMOUNT = config("COMMISSION_AMOUNT", default=20, cast=int)

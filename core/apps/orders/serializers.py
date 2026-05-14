@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from apps.users.models import User
-from apps.users.serializers import UserSerializer
-from apps.workers.models import ServiceCategory, WorkerProfile
-from apps.workers.serializers import ServiceCategorySerializer
+from core.apps.users.models import User
+from core.apps.users.serializers import UserSerializer
+from core.apps.workers.models import ServiceCategory, WorkerProfile
+from core.apps.workers.serializers import ServiceCategorySerializer
 from .models import Order
 
 
@@ -20,6 +20,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "client",
             "worker",
             "service_category",
+            "description",
+            "scheduled_at",
             "commission",
             "status",
             "created_at",
@@ -56,7 +58,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Order
-        fields = ["service_category", "worker_id"]
+        fields = ["service_category", "worker_id", "description", "scheduled_at"]
 
     def validate(self, attrs):
         """Validate worker against category when worker_id is provided."""
@@ -78,7 +80,11 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 {"worker_id": "This worker is not currently available."}
             )
 
-        if profile.profession.lower() != service_category.name.lower():
+        profile_category_id = getattr(profile, "service_category_id", None)
+        profession_matches = profile.profession.lower() == service_category.name.lower()
+        category_matches = profile_category_id == service_category.id
+
+        if not category_matches and not profession_matches:
             raise serializers.ValidationError(
                 {
                     "worker_id": (

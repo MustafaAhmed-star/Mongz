@@ -15,12 +15,6 @@ class WorkerService {
   })  : _client = client ?? http.Client(),
         _authService = authService ?? ApiService();
 
-  Map<String, String> get _headers {
-    final headers = {'Content-Type': 'application/json'};
-    // Access token is managed internally by ApiService if needed
-    return headers;
-  }
-
   // Get all service categories
   Future<List<ServiceCategory>> getCategories() async {
     final response = await _client.get(
@@ -78,7 +72,7 @@ class WorkerService {
   }) async {
     final response = await _client.post(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.workerCreate}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
       body: jsonEncode({
         'profession': profession,
         'experience_years': experienceYears,
@@ -105,7 +99,7 @@ class WorkerService {
 
     final response = await _client.patch(
       Uri.parse('${ApiConfig.baseUrl}${ApiConfig.workerMe}'),
-      headers: _headers,
+      headers: await _authService.getAuthHeaders(),
       body: jsonEncode(body),
     );
 
