@@ -1,42 +1,68 @@
-```
-# Flutter/Dart specific
-.dart_tool/
-.build/
-.packages
-*.g.dart
-*.freezed.dart
+# =========================
+# Python Core
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
-# Dependencies
-.pub/
-pubspec.lock
+# =========================
+# Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+.env_python/
 
-# Build outputs
-build/
-dist/
+# =========================
+# Django Specific
+# =========================
 db.sqlite3
 db.sqlite3-journal
+media/
+staticfiles/
 
-# Django migrations
+# =========================
+# Django Migrations
+# =========================
 **/migrations/*
 !**/migrations/__init__.py
-# IDE
+
+# =========================
+# Environment Variables & Secrets
+# =========================
+.env
+.env.local
+.env.*
+*.env
+
+# =========================
+# IDEs & Text Editors
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
+.pycharm_helpers/
 
-# Environment
-.env
-.env.local
-*.env.*
-
+# =========================
 # Logs
+# =========================
 *.log
+logs/
 
-# OS
+# =========================
+# OS Generated Files
+# =========================
 .DS_Store
+.DS_Store?
 Thumbs.db
+ehthumbs.db
 
-# Temporary files
+# =========================
+# Build & Packaging (Optional)
+# =========================
+build/
+dist/
+*.egg-info/
 *.tmp
-```
