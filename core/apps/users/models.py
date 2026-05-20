@@ -11,6 +11,11 @@ class User(AbstractUser):
 
     phone = models.CharField(max_length=20, unique=True)
     address = models.CharField(max_length=255, blank=True)
+    profile_image = models.ImageField(
+        upload_to="users/",
+        null=True,
+        blank=True,
+    )
     role = models.CharField(
         max_length=10,
         choices=Role.choices,
@@ -21,7 +26,7 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
-        
+    
     class Meta:
         verbose_name = "user"
         verbose_name_plural = "users"

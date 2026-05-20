@@ -1,11 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
-from .serializers import UserSerializer, RegisterSerializer, LoginSerializer, UserUpdateSerializer
+from .serializers import (UserSerializer, 
+                          RegisterSerializer,
+                          LoginSerializer,
+                          UserUpdateSerializer)
 
 
 def get_tokens(user):
@@ -23,6 +27,7 @@ def get_tokens(user):
 class RegisterView(APIView):
    
     permission_classes = [AllowAny]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     
     def get(self, request):
         return Response({"message": "Use POST to register"})
@@ -34,7 +39,7 @@ class RegisterView(APIView):
             return Response(
                 {
                     "message": "Account created successfully.",
-                    "user":    UserSerializer(user).data,
+                    "user":    UserSerializer(user, context={"request": request}).data,
                     "tokens":  get_tokens(user),
                 },
                 status=status.HTTP_201_CREATED,
@@ -53,7 +58,7 @@ class LoginView(APIView):
             return Response(
                 {
                     "message": "Login successful.",
-                    "user":    UserSerializer(user).data,
+                    "user":    UserSerializer(user, context={"request": request}).data,
                     "tokens":  get_tokens(user),
                 }
             )
@@ -63,9 +68,10 @@ class LoginView(APIView):
 class MyProfileView(APIView):
    
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         # partial=True allows updating just one field without sending all fields
@@ -76,5 +82,5 @@ class MyProfileView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(UserSerializer(request.user).data)
+            return Response(UserSerializer(request.user, context={"request": request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

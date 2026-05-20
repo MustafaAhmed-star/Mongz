@@ -13,7 +13,12 @@ pubspec.lock
 # Build outputs
 build/
 dist/
+db.sqlite3
+db.sqlite3-journal
 
+# Django migrations
+**/migrations/*
+!**/migrations/__init__.py
 # IDE
 .vscode/
 .idea/

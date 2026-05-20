@@ -2,32 +2,24 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 
 from apps.users.models import User
 from .models import ServiceCategory, WorkerProfile
-from .serializers import (
-    ServiceCategorySerializer,
-    WorkerProfileSerializer,
-    WorkerProfileWriteSerializer,
-)
+from .serializers import ServiceCategorySerializer, WorkerProfileSerializer, WorkerProfileWriteSerializer
 
-
-#  Pagination
 
 class WorkerPagination(PageNumberPagination):
-    """
-    Pagination for the workers list.
-    Default: 10 per page. Client can request up to 50 with ?page_size=N.
-    """
     page_size = 10
-    page_size_query_param = "page_size"   # ?page_size=20
+    page_size_query_param = "page_size"
     max_page_size = 50
 
 
-#  Service Categories
+# ── Service Categories
 
-class CategoryListView(APIView):
+class ServiceCategoryListView(APIView):
+    """GET /api/categories/ — list all service categories"""
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -35,9 +27,10 @@ class CategoryListView(APIView):
         return Response(ServiceCategorySerializer(categories, many=True).data)
 
 
-class CategoryCreateView(APIView):
+class ServiceCategoryCreateView(APIView):
     """POST /api/categories/create/ — admin only"""
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def post(self, request):
         if request.user.role != User.Role.ADMIN:
@@ -45,14 +38,17 @@ class CategoryCreateView(APIView):
                 {"error": "Only admins can create categories."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serializer = ServiceCategorySerializer(data=request.data)
+        serializer = ServiceCategorySerializer(
+            data=request.data,
+            context={"request": request},
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ── Worker Profiles ───────────────────────────────────────────────────
+# ── Worker Profiles 
 
 class WorkerListView(APIView):
     """
@@ -62,23 +58,23 @@ class WorkerListView(APIView):
 
     Optional query params:
         ?category=<id>      filter by service category ID
-        ?search=<text>      filter by profession keyword (case-insensitive)
+        ?search=<text>      filter by category name keyword (case-insensitive)
         ?page=<n>           page number (default 1)
         ?page_size=<n>      results per page (default 10, max 50)
 
     Score formula: (average_rating × 0.6) + (completed_jobs × 0.4)
     """
-    
+
     permission_classes = [AllowAny]
 
     def get(self, request):
-        queryset = WorkerProfile.objects.select_related("user").filter(
-            user__is_active = True,
-            user__role  = User.Role.WORKER,
-            is_available  = True,
+        queryset = WorkerProfile.objects.select_related("user", "category").filter(
+            user__is_active=True,
+            user__role=User.Role.WORKER,
+            is_available=True,
         )
 
-        # ── Filter by category (optional) ────────────────────────────
+        # ── Filter by category (optional) 
         category_id = request.query_params.get("category")
         if category_id:
             try:
@@ -88,26 +84,68 @@ class WorkerListView(APIView):
                     {"error": f"Category with id={category_id} does not exist."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-            # Match workers whose profession matches the category name
-            queryset = queryset.filter(profession__iexact=category.name)
+            queryset = queryset.filter(category=category)
 
-        # ── Filter by search keyword (optional) ──────────────────────
+        # ── Filter by search keyword (optional) ───────────────────────
         search = request.query_params.get("search")
         if search:
-            queryset = queryset.filter(profession__icontains=search)
+            queryset = queryset.filter(category__name__icontains=search)
 
-        
         sorted_workers = sorted(
             queryset,
             key=lambda p: p.calculate_score(),
-            reverse=True,   # highest score first
+            reverse=True,
         )
 
-        # ── Paginate ──────────────────────────────────────────────────
+        # ── Paginate
         paginator = WorkerPagination()
-        page  = paginator.paginate_queryset(sorted_workers, request)
+        page = paginator.paginate_queryset(sorted_workers, request)
 
-        serializer = WorkerProfileSerializer(page, many=True)
+        serializer = WorkerProfileSerializer(
+            page,
+            many=True,
+            context={"request": request},
+        )
+        return paginator.get_paginated_response(serializer.data)
+
+
+class CategoryWorkersView(APIView):
+    """
+    GET /api/categories/{id}/workers/
+
+    Returns available workers directly attached to a category.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            category = ServiceCategory.objects.get(pk=pk)
+        except ServiceCategory.DoesNotExist:
+            return Response(
+                {"error": "Category not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        queryset = WorkerProfile.objects.select_related("user", "category").filter(
+            user__is_active=True,
+            user__role=User.Role.WORKER,
+            is_available=True,
+            category=category,
+        )
+
+        sorted_workers = sorted(
+            queryset,
+            key=lambda p: p.calculate_score(),
+            reverse=True,
+        )
+
+        paginator = WorkerPagination()
+        page = paginator.paginate_queryset(sorted_workers, request)
+        serializer = WorkerProfileSerializer(
+            page,
+            many=True,
+            context={"request": request},
+        )
         return paginator.get_paginated_response(serializer.data)
 
 
@@ -127,7 +165,10 @@ class WorkerCreateView(APIView):
         if serializer.is_valid():
             profile = serializer.save()
             return Response(
-                WorkerProfileSerializer(profile).data,
+                WorkerProfileSerializer(
+                    profile,
+                    context={"request": request},
+                ).data,
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -138,13 +179,13 @@ class WorkerDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            worker = WorkerProfile.objects.select_related("user").get(pk=pk)
+            worker = WorkerProfile.objects.select_related("user", "category").get(pk=pk)
         except WorkerProfile.DoesNotExist:
             return Response(
                 {"error": "Worker not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(WorkerProfileSerializer(worker).data)
+        return Response(WorkerProfileSerializer(worker, context={"request": request}).data)
 
 
 class MyWorkerProfileView(APIView):
@@ -165,7 +206,12 @@ class MyWorkerProfileView(APIView):
                 {"error": "You do not have a worker profile yet."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(WorkerProfileSerializer(request.user.worker_profile).data)
+        return Response(
+            WorkerProfileSerializer(
+                request.user.worker_profile,
+                context={"request": request},
+            ).data
+        )
 
     def patch(self, request):
         if request.user.role != User.Role.WORKER:
@@ -186,5 +232,10 @@ class MyWorkerProfileView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(WorkerProfileSerializer(request.user.worker_profile).data)
+            return Response(
+                WorkerProfileSerializer(
+                    request.user.worker_profile,
+                    context={"request": request},
+                ).data
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

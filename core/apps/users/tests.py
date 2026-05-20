@@ -4,8 +4,8 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
-from .serializers import UserSerializer, RegisterSerializer, LoginSerializer, UserUpdateSerializer
+from apps.users.models import User
+from apps.users.serializers import UserSerializer, RegisterSerializer, LoginSerializer, UserUpdateSerializer
 
 User = get_user_model()
 
@@ -31,6 +31,7 @@ class UserSerializerTest(TestCase):
         self.assertEqual(data['phone'], "+1234567890")
         self.assertEqual(data['role'], User.Role.CLIENT)
         self.assertIn('id', data)
+        self.assertIn('profile_image', data)
         self.assertIn('date_joined', data)
 
 
