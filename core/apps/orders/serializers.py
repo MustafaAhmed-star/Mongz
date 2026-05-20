@@ -7,11 +7,10 @@ from .models import Order
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    
+
     client = UserSerializer(read_only=True)
     worker = UserSerializer(read_only=True)
     service_category = ServiceCategorySerializer(read_only=True)
-    commission_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -20,51 +19,67 @@ class OrderSerializer(serializers.ModelSerializer):
             "client",
             "worker",
             "service_category",
-            "commission",
+            "description",
+            "address",
+            "phone",
             "status",
             "created_at",
             "accepted_at",
+            "started_at",
             "completed_at",
+            "rejected_at",
             "cancelled_at",
-            "commission_payment",
         ]
-
-    def get_commission_payment(self, order):
-        try:
-            p = order.commission_payment
-            return {
-                "amount": str(p.amount),
-                "payment_status": p.payment_status,
-                "paymob_order_id": p.paymob_order_id,
-                "paymob_transaction_id": p.paymob_transaction_id,
-            }
-        except Exception:
-            return None
+        read_only_fields = fields
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
-    
+    description = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        trim_whitespace=True,
+    )
+    address = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        max_length=255,
+    )
+    phone = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        max_length=20,
+    )
+
     service_category = serializers.PrimaryKeyRelatedField(
         queryset=ServiceCategory.objects.all(),
     )
+    # worker_id is REQUIRED — the client must choose a specific worker (direct assignment)
     worker_id = serializers.PrimaryKeyRelatedField(
-        queryset   = User.objects.filter(role=User.Role.WORKER),
-        source = "worker",
-        required = False,
-        allow_null = True,
+        queryset=User.objects.filter(role=User.Role.WORKER),
+        source="worker",
+        required=True,
     )
 
     class Meta:
-        model  = Order
-        fields = ["service_category", "worker_id"]
+        model = Order
+        fields = ["service_category", "worker_id", "description", "address", "phone"]
+
+    def validate_description(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Order description is required.")
+        return value.strip()
 
     def validate(self, attrs):
-        """Validate worker against category when worker_id is provided."""
-        worker = attrs.get("worker")
-        service_category = attrs.get("service_category")
-
-        if worker is None:
-            return attrs
+        """
+        Validate that the chosen worker:
+          1. Has a profile
+          2. Is currently available
+          3. Belongs to the selected service category
+        """
+        worker = attrs["worker"]
+        service_category = attrs["service_category"]
 
         if not hasattr(worker, "worker_profile"):
             raise serializers.ValidationError(
@@ -78,14 +93,29 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 {"worker_id": "This worker is not currently available."}
             )
 
-        if profile.profession.lower() != service_category.name.lower():
+        if profile.category_id != service_category.id:
             raise serializers.ValidationError(
                 {
                     "worker_id": (
-                        f"Worker's profession '{profile.profession}' does not match "
-                        f"the selected category '{service_category.name}'."
+                        "This worker does not belong to the selected category."
                     )
                 }
             )
 
         return attrs
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        client = request.user
+
+        address = validated_data.get("address", "")
+        phone = validated_data.get("phone", "")
+
+        return Order.objects.create(
+            client=client,
+            service_category=validated_data["service_category"],
+            worker=validated_data["worker"],
+            description=validated_data["description"],
+            address=address.strip() or client.address,
+            phone=phone.strip() or client.phone,
+        )
