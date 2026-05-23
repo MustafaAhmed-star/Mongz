@@ -22,3 +22,17 @@ class RatingCreateView(APIView):
             rating = serializer.save()
             return Response(RatingSerializer(rating).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WorkerRatingListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        ratings = Rating.objects.filter(worker=request.user).order_by('-created_at')
+
+        if not ratings.exists():
+            return Response(
+                {"message": "No ratings found for this worker."},
+                status=status.HTTP_200_OK)
+        serializer = RatingSerializer(ratings, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

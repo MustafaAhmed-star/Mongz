@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from apps.ratings.views import WorkerRatingListAPIView
 
 urlpatterns = [
     path("categories/",        views.ServiceCategoryListView.as_view(),    name="category-list"),
@@ -8,4 +9,5 @@ urlpatterns = [
     path("workers/create/",    views.WorkerCreateView.as_view(),    name="worker-create"),
     path("workers/me/",        views.MyWorkerProfileView.as_view(), name="worker-me"),
     path("workers/<int:pk>/",  views.WorkerDetailView.as_view(),    name="worker-detail"),
+    path("workers/my-ratings/", WorkerRatingListAPIView.as_view(), name = "worker-my-ratings"),
 ]

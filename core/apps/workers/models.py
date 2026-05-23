@@ -1,5 +1,5 @@
 from django.db import models
-from apps.users.models import User
+from django.conf import settings
 
 
 class ServiceCategory(models.Model):
@@ -17,7 +17,7 @@ class ServiceCategory(models.Model):
 class WorkerProfile(models.Model):
 
     user = models.OneToOneField(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="worker_profile",
     )
